@@ -4,10 +4,10 @@ var router = express.Router();
 const mysql = require('mysql2/promise');
 const config = require('../conf/config');
 
-// 미세먼지 API
-const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";
-const API_KEY = "NirKOUIgxxTRm0PmhS9WJnW2RBIE2%2BntU%2BWVYVvr79ZpxbIF99YHK%2B9M6oskOYOpIx9z8VHxKPKPEa1iRPxGLw%3D%3D";
-const MAX_ROWS = 10000; // 가능한 최대 행 수
+// 미세먼지 API 정보
+const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth";  
+const API_KEY = "DlF6e52nwcUoyTvV2SKdU8khO2Pcc7VeX8Vn6FmwaaLGg0g0QlP3NiJi8FTn99tj6iWvCU5oorgGpa61n4m3Cw%3D%3D"; // 실제 서비스 키로 교체
+const MAX_ROWS = 10000; // 페이지당 최대 행 수 (최대 100개로 제한)
 
 // 데이터베이스 연결 생성
 async function createConnection() {
@@ -20,10 +20,19 @@ async function createConnection() {
     });
 }
 
+// 오늘 날짜를 'YYYY-MM-DD' 형식으로 반환하는 함수
+function getTodayDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // 전국 데이터 불러와 DB에 저장하는 함수
 async function fetchAndStoreAirQualityData() {
-    const sidoName = '전국'; // 전국 데이터만 가져옴
-    let pageNo = 1;
+    const searchDate = getTodayDate(); // 오늘 날짜로 설정
+    const informCode = 'PM10'; // 최신 데이터를 가져올 오염물질 코드 (예: PM10)
     let allData = [];
 
     try {
@@ -32,42 +41,36 @@ async function fetchAndStoreAirQualityData() {
         // 기존 데이터 삭제
         await connection.execute('DELETE FROM Info');
 
-        // API 데이터를 페이지 단위로 가져와서 DB에 저장
-        while (true) {
-            const response = await axios.get(API_URL, {
-                params: {
-                    serviceKey: API_KEY,
-                    returnType: 'json',
-                    numOfRows: MAX_ROWS,
-                    pageNo,
-                    sidoName,
-                    ver: '1.0'
-                }
-            });
-
-            const data = response.data.response.body.items;
-            if (!data) break; // 데이터가 없으면 중단
-            allData = allData.concat(data); // 데이터를 누적
-
-            // 데이터베이스에 데이터 저장
-            for (const item of data) {
-                const { sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue } = item;
-
-                // 데이터 삽입 또는 업데이트
-                await connection.execute(
-                    `INSERT INTO Info (sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue) 
-                     VALUES (?, ?, ?, ?, ?, ?)
-                     ON DUPLICATE KEY UPDATE 
-                     pm10Value = VALUES(pm10Value), 
-                     pm25Value = VALUES(pm25Value), 
-                     khaiValue = VALUES(khaiValue)`,
-                    [sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue]
-                );
+        // API 요청
+        const response = await axios.get(API_URL, {
+            params: {
+                serviceKey: API_KEY,
+                returnType: 'json', // JSON 형식으로 받기
+                numOfRows: MAX_ROWS,
+                pageNo: 1,
+                searchDate, // 오늘 날짜로 설정
+                InformCode: informCode // 오염물질 코드
             }
+        });
 
-            // 전체 페이지를 다 불러왔는지 확인
-            if (data.length < MAX_ROWS) break;
-            pageNo += 1; // 다음 페이지로 이동
+        const data = response.data.response.body.items;
+        if (!data) return; // 데이터가 없으면 종료
+        allData = allData.concat(data); // 데이터를 누적
+
+        // 데이터베이스에 데이터 저장
+        for (const item of data) {
+            const { sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue } = item;
+
+            // 데이터 삽입 또는 업데이트
+            await connection.execute(
+                `INSERT INTO Info (sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue) 
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE 
+                 pm10Value = VALUES(pm10Value), 
+                 pm25Value = VALUES(pm25Value), 
+                 khaiValue = VALUES(khaiValue)`,
+                [sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue]
+            );
         }
 
         await connection.end(); // DB 연결 종료
