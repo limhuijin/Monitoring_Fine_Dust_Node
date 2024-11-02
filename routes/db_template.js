@@ -9,12 +9,6 @@ const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";
 const API_KEY = "NirKOUIgxxTRm0PmhS9WJnW2RBIE2%2BntU%2BWVYVvr79ZpxbIF99YHK%2B9M6oskOYOpIx9z8VHxKPKPEa1iRPxGLw%3D%3D";
 const MAX_ROWS = 10000; // 가능한 최대 행 수
 
-// 대상 지역명 리스트
-const sidoNames = [
-    '전국', '서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원',
-    '충북', '충남', '전북', '전남', '경북', '경남', '제주', '세종'
-];
-
 // 데이터베이스 연결 생성
 async function createConnection() {
     return await mysql.createConnection({
@@ -26,12 +20,19 @@ async function createConnection() {
     });
 }
 
-// 특정 지역의 데이터를 가져와 DB에 저장하는 함수
-async function fetchAndStoreAirQualityForRegion(connection, sidoName) {
+// 전국 데이터 불러와 DB에 저장하는 함수
+async function fetchAndStoreAirQualityData() {
+    const sidoName = '전국'; // 전국 데이터만 가져옴
     let pageNo = 1;
     let allData = [];
 
     try {
+        const connection = await createConnection();
+
+        // 기존 데이터 삭제
+        await connection.execute('DELETE FROM Info');
+
+        // API 데이터를 페이지 단위로 가져와서 DB에 저장
         while (true) {
             const response = await axios.get(API_URL, {
                 params: {
@@ -68,29 +69,11 @@ async function fetchAndStoreAirQualityForRegion(connection, sidoName) {
             if (data.length < MAX_ROWS) break;
             pageNo += 1; // 다음 페이지로 이동
         }
-        console.log(`${sidoName} 지역의 데이터가 성공적으로 저장되었습니다.`);
+
+        await connection.end(); // DB 연결 종료
+        console.log("전국 대기질 데이터가 성공적으로 업데이트되었습니다.");
     } catch (error) {
-        console.error(`${sidoName} 지역의 데이터 저장 중 오류 발생:`, error.message);
-    }
-}
-
-// 모든 지역의 데이터를 주기적으로 가져와서 DB에 저장하는 함수
-async function fetchAndStoreAirQualityData() {
-    try {
-        const connection = await createConnection();
-
-        // 기존 데이터 삭제
-        await connection.execute('DELETE FROM Info');
-
-        // 모든 지역의 데이터를 가져와서 DB에 저장
-        for (const sidoName of sidoNames) {
-            await fetchAndStoreAirQualityForRegion(connection, sidoName);
-        }
-
-        await connection.end();
-        console.log("모든 지역의 대기질 데이터가 성공적으로 업데이트되었습니다.");
-    } catch (error) {
-        console.error("전체 데이터 저장 중 오류 발생:", error.message);
+        console.error("전국 데이터 저장 중 오류 발생:", error.message);
     }
 }
 
