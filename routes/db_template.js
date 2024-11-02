@@ -3,6 +3,7 @@ var router = express.Router();
 const { XMLHttpRequest } = require('xmlhttprequest');
 const mysql = require('mysql2/promise');
 const config = require('../conf/config');
+const xml2js = require('xml2js');
 
 //데이터베이스 연결 생성
 async function createConnection() {
@@ -29,8 +30,8 @@ async function fetchAndStoreAirQualityData() {
 
         const xhr = new XMLHttpRequest();
         const url = 'http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty';
-        let queryParams = '?' + encodeURIComponent('serviceKey') + '=' + 'gDrKnQzj%2BzUrq%2Bp%2BJBn90S5Z391L0R4Vgn0pswNaZtG%2FHao43YNaj%2B71Z0Sg3o3QDBtdL2vD5TYo8puLMFPkfA%3D%3D';
-        queryParams += '&' + encodeURIComponent('returnType') + '=' + encodeURIComponent('json');
+        let queryParams = '?' + encodeURIComponent('serviceKey') + '=' + '';
+        queryParams += '&' + encodeURIComponent('returnType') + '=' + encodeURIComponent('xml');
         queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('1000');
         queryParams += '&' + encodeURIComponent('pageNo') + '=' + encodeURIComponent('1');
         queryParams += '&' + encodeURIComponent('sidoName') + '=' + encodeURIComponent('전국');
@@ -41,21 +42,27 @@ async function fetchAndStoreAirQualityData() {
         xhr.onreadystatechange = async function () {
             if (xhr.readyState === 4) {
                 if (xhr.status === 200) {
-                    const responseData = JSON.parse(xhr.responseText);
-                    
-                    // 예시로, data.list에서 필요한 정보를 가져와 데이터베이스에 저장
-                    const airQualityData = responseData.response.body.items;
-                    
-                    for (const item of airQualityData) {
-                        // 필요한 데이터 추출 및 DB 삽입 예시
-                        const { sidoName, stationName, dateTime, pm10Value, pm25Value, khaiValue } = item;
-                        await connection.execute(
-                            'INSERT INTO AirQualityData (sidoName, stationName, dateTime, pm10Value, pm25Value, khaiValue) VALUES (?, ?, ?, ?, ?, ?)',
-                            [ sidoName, stationName, dateTime, pm10Value, pm25Value, khaiValue ]
-                        );
-                    }
+                    // XML 데이터를 JSON으로 변환
+                    xml2js.parseString(xhr.responseText, { explicitArray: false }, async (err, result) => {
+                        if (err) {
+                            console.error("XML 파싱 오류:", err.message);
+                            return;
+                        }
 
-                    console.log("데이터가 성공적으로 저장되었습니다.");
+                        // JSON 데이터로 변환된 응답에서 필요한 정보 추출
+                        const airQualityData = result.response.body.items.item;
+
+                        for (const item of airQualityData) {
+                            // 필요한 데이터 추출 및 DB 삽입 예시
+                            const { sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue } = item;
+                            await connection.execute(
+                                'INSERT INTO AirQualityData (sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue) VALUES (?, ?, ?, ?, ?, ?)',
+                                [sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue]
+                            );
+                        }
+
+                        console.log("데이터가 성공적으로 저장되었습니다.");
+                    });
                 } else {
                     console.error('요청 실패:', xhr.status, xhr.statusText);
                 }
