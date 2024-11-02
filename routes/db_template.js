@@ -34,7 +34,7 @@ async function fetchAndStoreAirQualityData() {
 
         const xhr = new XMLHttpRequest();
         const url = 'http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty';
-        let queryParams = '?' + encodeURIComponent('serviceKey') + '=' + '';
+        let queryParams = '?' + encodeURIComponent('serviceKey') + '=' + 'y8dXVp6U0BN1SJFnDk%2FxLULopP%2BRCSQv4z3TneoxiOkRBra11K7Ax2go80y7oL%2B62PsxuqAigc7aP5niafI3sg%3D%3D';
         queryParams += '&' + encodeURIComponent('returnType') + '=' + encodeURIComponent('xml');
         queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('2500');
         queryParams += '&' + encodeURIComponent('pageNo') + '=' + encodeURIComponent('1');
