@@ -9,6 +9,9 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var DBTemplateRouter = require('./routes/db_template');
 
+//미세먼지 api
+var airQualityRouter = require('./routes/db_template'); 
+
 var app = express();
 
 // view engine setup
@@ -43,5 +46,8 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+
+//미세먼지 api
+app.use('/api/air-quality', airQualityRouter);
 
 module.exports = app;

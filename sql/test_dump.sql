@@ -24,11 +24,17 @@ USE `test`;
 DROP TABLE IF EXISTS `test`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `test` (
-  `num` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`num`)
-) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE IF NOT EXISTS `Info` (
+  `Idx` INT NOT NULL AUTO_INCREMENT,
+  `sidoName` VARCHAR(20) NOT NULL,
+  `stationName` VARCHAR(30) NOT NULL,
+  `dataTime` DATETIME NOT NULL,
+  `pm10Value` INT NOT NULL,
+  `pm25Value` INT NOT NULL,
+  `khaiValue` INT NOT NULL,
+  PRIMARY KEY (`Idx`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -37,7 +43,7 @@ CREATE TABLE `test` (
 
 LOCK TABLES `test` WRITE;
 /*!40000 ALTER TABLE `test` DISABLE KEYS */;
-INSERT INTO `test` VALUES (2,'value1'),(3,'value1'),(4,'value1'),(5,'value1'),(6,'value1'),(7,'value1'),(8,'value1'),(9,'value1'),(10,'value1'),(11,'value1'),(12,'value1'),(13,'value1'),(14,'value1'),(15,'value1'),(16,'value1'),(17,'value1'),(18,'value1'),(19,'value1'),(20,'value1'),(21,'value1');
+INSERT INTO `test` VALUES (2,'value1'),(3,'value1'),(4,'value1'),(5,'value1'),(6,'value1'),(7,'value1');
 /*!40000 ALTER TABLE `test` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
