@@ -1,15 +1,19 @@
 var express = require('express');
 const axios = require('axios');
 var router = express.Router();
-
 const mysql = require('mysql2/promise');
 const config = require('../conf/config');
 
-//미세먼지 api
-const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";  
+// 미세먼지 API
+const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc";
 const API_KEY = "NirKOUIgxxTRm0PmhS9WJnW2RBIE2%2BntU%2BWVYVvr79ZpxbIF99YHK%2B9M6oskOYOpIx9z8VHxKPKPEa1iRPxGLw%3D%3D";
-const MAX_ROWS = 10000; 
+const MAX_ROWS = 10000; // 가능한 최대 행 수
 
+// 대상 지역명 리스트
+const sidoNames = [
+    '전국', '서울', '부산', '대구', '인천', '광주', '대전', '울산', '경기', '강원',
+    '충북', '충남', '전북', '전남', '경북', '경남', '제주', '세종'
+];
 
 // 데이터베이스 연결 생성
 async function createConnection() {
@@ -22,16 +26,12 @@ async function createConnection() {
     });
 }
 
-//미세먼지 api 가지고 오기
-router.get('/air-quality', async (req, res) => {
-    const { sidoName } = req.query; // 도시 이름을 쿼리로 받음
+// 특정 지역의 데이터를 가져와 DB에 저장하는 함수
+async function fetchAndStoreAirQualityForRegion(connection, sidoName) {
     let pageNo = 1;
     let allData = [];
 
     try {
-        const connection = await createConnection();
-
-        // API 데이터를 페이지 단위로 가져와서 DB에 저장
         while (true) {
             const response = await axios.get(API_URL, {
                 params: {
@@ -68,99 +68,34 @@ router.get('/air-quality', async (req, res) => {
             if (data.length < MAX_ROWS) break;
             pageNo += 1; // 다음 페이지로 이동
         }
-
-        await connection.end(); // DB 연결 종료
-        res.json({ result: true, items: allData });
+        console.log(`${sidoName} 지역의 데이터가 성공적으로 저장되었습니다.`);
     } catch (error) {
-        res.status(500).json({ result: false, message: 'Error fetching and saving air quality data', error: error.message });
+        console.error(`${sidoName} 지역의 데이터 저장 중 오류 발생:`, error.message);
     }
-});
+}
 
-// 1. GET POST /list - 데이터 조회
-router.get('/list', async (req, res) => {
+// 모든 지역의 데이터를 주기적으로 가져와서 DB에 저장하는 함수
+async function fetchAndStoreAirQualityData() {
     try {
         const connection = await createConnection();
-        const [rows] = await connection.execute('SELECT * FROM test');
+
+        // 기존 데이터 삭제
+        await connection.execute('DELETE FROM Info');
+
+        // 모든 지역의 데이터를 가져와서 DB에 저장
+        for (const sidoName of sidoNames) {
+            await fetchAndStoreAirQualityForRegion(connection, sidoName);
+        }
+
         await connection.end();
-
-        res.json({ result: true, list: rows });
+        console.log("모든 지역의 대기질 데이터가 성공적으로 업데이트되었습니다.");
     } catch (error) {
-        res.status(500).json({ result: false, message: 'Error fetching data', error: error.message });
+        console.error("전체 데이터 저장 중 오류 발생:", error.message);
     }
-});
+}
 
-router.post('/list', async (req, res) => {
-    try {
-        const connection = await createConnection();
-        const [rows] = await connection.execute('SELECT * FROM test');
-        await connection.end();
-
-        res.json({ result: true, list: rows });
-    } catch (error) {
-        res.status(500).json({ result: false, message: 'Error fetching data', error: error.message });
-    }
-});
-
-router.post('/one/:num', async (req, res) => {
-    const { num } = req.body; // 파라미터를 JSON Object로 변환
-
-    try {
-        const connection = await createConnection();
-        const [data] = await connection.execute('SELECT * FROM test WHERE num = ?', [num]);
-        await connection.end();
-
-        res.json({ result: true, data: data[0] });
-    } catch (error) {
-        res.status(500).json({ result: false, message: 'Error fetching data', error: error.message });
-    }
-});
-
-
-// 2. POST /create - 데이터 삽입
-router.post('/insert', async (req, res) => {
-    const { name } = req.body; // 파라미터를 JSON Object로 변환
-    
-    try {
-        const connection = await createConnection();
-        const [result] = await connection.execute('INSERT INTO test (name) VALUES (?)', [name]);
-        await connection.end();
-
-        res.json({ result: true, message: 'Data inserted', insertId: result.insertId });
-    } catch (error) {
-        res.status(500).json({ result: false, message: 'Error inserting data', error: error.message });
-    }
-});
-
-
-// 3. PUT /update/:id - 데이터 수정
-router.put('/update', async (req, res) => {
-    const { num, name } = req.body;
-
-    try {
-        const connection = await createConnection();
-        await connection.execute('UPDATE test SET name = ? WHERE num = ?', [name, num]);
-        await connection.end();
-
-        res.json({ result: true, message: 'Data updated' });
-    } catch (error) {
-        res.status(500).json({ result: false, message: 'Error updating data', error: error.message });
-    }
-});
-
-
-// 4. DELETE /delete/:id - 데이터 삭제
-router.delete('/delete', async (req, res) => {
-    const { num } = req.body;
-
-    try {
-        const connection = await createConnection();
-        await connection.execute('DELETE FROM test WHERE num = ?', [num]);
-        await connection.end();
-
-        res.json({ result: true, message: 'Data deleted' });
-    } catch (error) {
-        res.status(500).json({ result: false, message: 'Error deleting data', error: error.message });
-    }
-});
+// 초기 데이터 로드 및 30분마다 반복
+fetchAndStoreAirQualityData(); // 서버 시작 시 한 번 실행
+setInterval(fetchAndStoreAirQualityData, 30 * 60 * 1000); // 30분마다 데이터 업데이트
 
 module.exports = router;
