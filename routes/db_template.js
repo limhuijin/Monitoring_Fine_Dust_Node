@@ -25,14 +25,18 @@ async function createConnection() {
 
 // 전국 데이터 불러와 DB에 저장하고 JSON 파일로 저장하는 함수
 async function fetchAndStoreAirQualityData() {
+    let connection; // 함수 시작 부분에서 connection 변수를 선언
     try {
         const connection = await createConnection();
+
+        await connection.execute("DELETE FROM Info");
+        console.log("기존 데이터가 성공적으로 삭제되었습니다.");
 
         const xhr = new XMLHttpRequest();
         const url = 'http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty';
         let queryParams = '?' + encodeURIComponent('serviceKey') + '=' + '';
         queryParams += '&' + encodeURIComponent('returnType') + '=' + encodeURIComponent('xml');
-        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('1000');
+        queryParams += '&' + encodeURIComponent('numOfRows') + '=' + encodeURIComponent('2500');
         queryParams += '&' + encodeURIComponent('pageNo') + '=' + encodeURIComponent('1');
         queryParams += '&' + encodeURIComponent('sidoName') + '=' + encodeURIComponent('전국');
         queryParams += '&' + encodeURIComponent('ver') + '=' + encodeURIComponent('1.0');
@@ -54,10 +58,17 @@ async function fetchAndStoreAirQualityData() {
 
                         for (const item of airQualityData) {
                             // 필요한 데이터 추출 및 DB 삽입 예시
-                            const { sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue } = item;
+                            const {
+                                sidoName = null,
+                                stationName = null,
+                                dateTime = null,
+                                pm10Value = null,
+                                pm25Value = null,
+                                khaiValue = null,
+                            } = item;
                             await connection.execute(
-                                'INSERT INTO AirQualityData (sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue) VALUES (?, ?, ?, ?, ?, ?)',
-                                [sidoName, stationName, dataTime, pm10Value, pm25Value, khaiValue]
+                                "INSERT INTO Info (sidoName, stationName, dateTime, pm10Value, pm25Value, khaiValue) VALUES (?, ?, ?, ?, ?, ?)",
+                                [sidoName, stationName, dateTime, pm10Value, pm25Value, khaiValue]
                             );
                         }
 
@@ -66,7 +77,6 @@ async function fetchAndStoreAirQualityData() {
                 } else {
                     console.error('요청 실패:', xhr.status, xhr.statusText);
                 }
-                connection.end();  // 데이터베이스 연결 종료
             }
         };
 
@@ -74,8 +84,13 @@ async function fetchAndStoreAirQualityData() {
  
     } catch (error) {
         console.error("전국 대기질 데이터 저장 중 오류 발생:", error.message);
+    } finally {
+        if (connection) {
+            connection.end();  // 데이터베이스 연결 종료
+        }
     }
 }
+
 
 // 초기 데이터 로드 및 30분마다 반복
 fetchAndStoreAirQualityData(); // 서버 시작 시 한 번 실행

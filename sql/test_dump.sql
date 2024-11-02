@@ -26,12 +26,12 @@ DROP TABLE IF EXISTS `test`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE IF NOT EXISTS `Info` (
   `Idx` INT NOT NULL AUTO_INCREMENT,
-  `sidoName` VARCHAR(20) NOT NULL,
-  `stationName` VARCHAR(30) NOT NULL,
-  `dataTime` DATETIME NOT NULL,
-  `pm10Value` INT NOT NULL,
-  `pm25Value` INT NOT NULL,
-  `khaiValue` INT NOT NULL,
+  `sidoName` VARCHAR(20)L,
+  `stationName` VARCHAR(30),
+  `dataTime` DATETIME,
+  `pm10Value` VARCHAR(10),
+  `pm25Value` VARCHAR(10),
+  `khaiValue` VARCHAR(10),
   PRIMARY KEY (`Idx`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
