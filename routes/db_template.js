@@ -5,9 +5,9 @@ const mysql = require('mysql2/promise');
 const config = require('../conf/config');
 
 // 미세먼지 API 정보
-const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getMinuDustFrcstDspth";  
-const API_KEY = "DlF6e52nwcUoyTvV2SKdU8khO2Pcc7VeX8Vn6FmwaaLGg0g0QlP3NiJi8FTn99tj6iWvCU5oorgGpa61n4m3Cw%3D%3D"; // 실제 서비스 키로 교체
-const MAX_ROWS = 10000; // 페이지당 최대 행 수 (최대 100개로 제한)
+const API_URL = "http://apis.data.go.kr/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty";
+const API_KEY = ""; // 실제 서비스 키로 교체
+const MAX_ROWS = 10000; // 페이지당 최대 행 수
 
 // 데이터베이스 연결 생성
 async function createConnection() {
@@ -20,19 +20,9 @@ async function createConnection() {
     });
 }
 
-// 오늘 날짜를 'YYYY-MM-DD' 형식으로 반환하는 함수
-function getTodayDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
 // 전국 데이터 불러와 DB에 저장하는 함수
 async function fetchAndStoreAirQualityData() {
-    const searchDate = getTodayDate(); // 오늘 날짜로 설정
-    const informCode = 'PM10'; // 최신 데이터를 가져올 오염물질 코드 (예: PM10)
+    const sidoName = '전국'; // 전국 데이터를 가져오기 위해 설정
     let allData = [];
 
     try {
@@ -48,8 +38,7 @@ async function fetchAndStoreAirQualityData() {
                 returnType: 'json', // JSON 형식으로 받기
                 numOfRows: MAX_ROWS,
                 pageNo: 1,
-                searchDate, // 오늘 날짜로 설정
-                InformCode: informCode // 오염물질 코드
+                sidoName // '전국' 데이터를 가져오기 위한 파라미터
             }
         });
 
